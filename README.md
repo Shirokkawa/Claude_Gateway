@@ -1,6 +1,17 @@
 # Claude Gateway
 
-Windows 10 虚拟机通过 Ubuntu 网关访问宿主机 Clash Verge 的菲律宾代理。此仓库记录现有环境的看门器、DNS 转发器和安装脚本，不负责从零安装 VMware、Clash 或 Redsocks。
+**v0.9** · 面向中国大陆及其他 Claude 暂不支持地区用户的 Claude Code 虚拟机网关实验项目。
+
+项目让 Windows 10 虚拟机通过 Ubuntu 网关，使用宿主机 Clash Verge 的菲律宾代理出口。它针对节点切换、TUN 关闭和代理退出等情况设置检查与断网保护，目的是降低 Claude Code 意外从非预期网络出口连接所带来的账号风控风险。**它不能保证账号不被限制或封禁，也不能改变 Claude 的服务地区、账号资格或服务条款。**使用前请自行确认当地法律及服务条款。
+
+当前仓库记录的是一套已运行环境的看门器、DNS 转发器和安装脚本，不包含从零部署 VMware、Clash、Redsocks 或 Ubuntu 网关的完整流程。
+
+## 工作原理
+
+- 宿主机检查 TUN 网卡和代理出口国家，按检查结果控制 Ubuntu 到 Clash 代理端口的防火墙规则，并向 Ubuntu 提供健康状态。
+- Ubuntu 定期读取宿主机状态，且每约 5 分钟独立复核代理出口；两项检查通过时才启动 Redsocks，否则停止。
+- Windows 客户机的 TCP 流量由 Ubuntu 重定向至 Redsocks；DNS 由 dnsmasq 转给本机 DoH 服务，再经宿主机代理访问 Cloudflare。
+- 客户机不能直接访问宿主机的代理端口，以免绕过网关检查。
 
 ## 网络拓扑
 
@@ -8,7 +19,7 @@ Windows 10 虚拟机通过 Ubuntu 网关访问宿主机 Clash Verge 的菲律宾
 - Ubuntu LAN：`192.168.50.2`；健康端口：宿主机 `7898`。
 - Windows 客户机：`192.168.50.10`；网关和 DNS：`192.168.50.2`。
 
-宿主机看门器检查 Mihomo 网卡和代理出口位置，并控制到代理端口的入站阻断规则。Ubuntu 每约 2 秒检查宿主机健康状态，定期独立复核出口国家，仅在两项通过时启动 Redsocks。dnsmasq 将客户机 DNS 转给本机 DoH 服务；DoH 服务只通过宿主机代理连接 Cloudflare。
+这些地址、端口和接口名均写在脚本中。复用前必须按自己的网络拓扑逐项核对；不要在其他环境直接执行安装脚本。
 
 ## 部署
 
@@ -34,4 +45,8 @@ sudo sh ~/install-doh.sh
 - 客户机直连宿主机代理端口的 IPv4 和 IPv6 测试失败。
 - Ubuntu 与 Windows 客户机重启后，服务、REDIRECT 规则、DNS 和菲律宾出口恢复。
 
-出口判断依赖 Cloudflare 的位置响应和轮询，切换故障时存在检测延迟。地理位置检查不能保证 Claude 账号不受风控；宿主机自身重启后的计划任务自启尚未实测。
+## 限制
+
+- 出口国家判断依赖 Cloudflare 的位置响应和轮询，故障切换时存在检测延迟；检查通过也不代表 Claude 会接受该连接或账号。
+- 当前仅在上述固定的 VMware、Ubuntu、Windows 10、Clash Verge 和菲律宾出口组合中验证；其他配置需要自行适配和重新测试。
+- 宿主机自身重启后的计划任务自启尚未实测。
