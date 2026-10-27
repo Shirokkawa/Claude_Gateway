@@ -23,10 +23,10 @@
 
 ## 部署
 
-先在宿主机管理员 PowerShell 运行：
+先在宿主机管理员 PowerShell 进入仓库目录并运行：
 
 ```powershell
-& 'E:\Vibe Coding\Claude_Gateway\Install-HostGuard.ps1'
+.\Install-HostGuard.ps1
 ```
 
 在已有 Ubuntu 网关配置的前提下，把 `check-ph-proxy`、`install-ubuntu.sh`、`proxy-doh.py`、`install-doh.sh` 传到 Ubuntu 用户主目录，依次运行：
