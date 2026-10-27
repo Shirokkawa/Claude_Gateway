@@ -1,0 +1,31 @@
+#!/bin/sh
+set -u
+
+host_country=$(curl --noproxy '*' --connect-timeout 1 --max-time 4 --fail --silent http://192.168.50.1:7898/ 2>/dev/null || true)
+stamp=/run/ph-proxy-guard-country-ok
+now=$(date +%s)
+last=$(cat "$stamp" 2>/dev/null || echo 0)
+case "$last" in *[!0-9]*|'') last=0 ;; esac
+
+if [ "$host_country" != PH ]; then
+    rm -f "$stamp"
+elif [ $((now - last)) -ge 300 ]; then
+    trace=$(curl --noproxy '' --proxy http://192.168.50.1:7897 --connect-timeout 2 --max-time 5 --fail --silent https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null || true)
+    if printf '%s\n' "$trace" | grep -qx 'loc=PH'; then
+        printf '%s\n' "$now" > "$stamp"
+    else
+        rm -f "$stamp"
+    fi
+fi
+
+if [ "$host_country" = PH ] && [ -f "$stamp" ]; then
+    if ! systemctl is-active --quiet redsocks; then
+        systemctl start redsocks
+        logger -t ph-proxy-guard 'PH checks passed; redsocks started'
+    fi
+else
+    if systemctl is-active --quiet redsocks; then
+        systemctl stop redsocks
+        logger -t ph-proxy-guard 'PH check failed; redsocks stopped'
+    fi
+fi
